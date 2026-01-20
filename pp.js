@@ -1287,19 +1287,19 @@ function renderAll() {
 /* -----------------------------
    Tabs
 --------------------------------*/
-function initTabs() {
-  document.querySelectorAll(".tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(b => b.setAttribute("aria-selected", "false"));
-      btn.setAttribute("aria-selected", "true");
-
-      const tab = btn.getAttribute("data-tab");
-      document.querySelectorAll(".tabPane").forEach(p => p.classList.add("hidden"));
-      els(`tab-${tab}`).classList.remove("hidden");
+}function initTabs() {
+    document.querySelectorAll(".tabBtn").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            
+            const tab = btn.getAttribute("data-tab");
+            document.querySelectorAll(".tabPane").forEach(p => p.classList.add("hidden"));
+            const targetPane = document.getElementById(`tab-${tab}`);
+            if (targetPane) targetPane.classList.remove("hidden");
+        });
     });
-  });
 }
-
 /* -----------------------------
    Wire up events
 --------------------------------*/
