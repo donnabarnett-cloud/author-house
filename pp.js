@@ -930,6 +930,225 @@ async function askResearch() {
     log(`Research error: ${String(e?.message || e)}`);
     toast("Research failed (see logs).");
   } finally {
+
+     /* -----------------------------
+   AI Book Planner (Chat & Generate)
+--------------------------------*/
+let plannerChat = [];
+
+async function sendPlannerMessage() {
+  const input = els("plannerInput").value.trim();
+  if (!input) return toast("Type a message.");
+  
+  // Add user message to chat
+  plannerChat.push({ role: "user", content: input });
+  renderPlannerChat();
+  els("plannerInput").value = "";
+  
+  setStatus("AI thinking...");
+  log(`Book Planner: User asked: ${input}`);
+  
+  try {
+    const systemPrompt = {
+      role: "system",
+      content: "You are an expert book planning assistant. Help the author develop their book idea by asking questions about genre, plot, characters, target word count, and chapter structure. Be conversational and helpful. When the author confirms they're ready, provide a complete book plan with: title, genre, target word count, number of chapters, chapter titles, plot outline, character descriptions, and writing style notes."
+    };
+    
+    const out = await withRetries(() => rate.schedule(() =>
+      callAI([systemPrompt, ...plannerChat], 1500)
+    ), 2);
+    
+    // Add AI response to chat
+    plannerChat.push({ role: "assistant", content: out });
+    renderPlannerChat();
+    toast("AI responded");
+    log("Book Planner: AI responded");
+  } catch (e) {
+    log(`Book Planner error: ${String(e?.message || e)}`);
+    toast("AI failed (see logs).");
+  } finally {
+    setStatus("Ready");
+  }
+}
+
+function renderPlannerChat() {
+  const box = els("plannerChatBox");
+  box.innerHTML = "";
+  
+  plannerChat.forEach(msg => {
+    const div = document.createElement("div");
+    div.className = msg.role === "user" ? "chat-user" : "chat-ai";
+    div.textContent = `${msg.role === "user" ? "You" : "AI"}: ${msg.content}`;
+    box.appendChild(div);
+  });
+  
+  // Scroll to bottom
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearPlannerChat() {
+  plannerChat = [];
+  renderPlannerChat();
+  toast("Chat cleared");
+}
+
+async function generateBookFromPlan() {
+  if (plannerChat.length === 0) return toast("Chat with AI first to develop a plan.");
+  
+  setStatus("Extracting book plan...");
+  log("Generating book from planner chat...");
+  
+  try {
+    // Ask AI to extract structured plan from chat
+    const extractPrompt = {
+      role: "system",
+      content: "Extract a structured book plan from the conversation. Return JSON with: {title, genre, targetWordCount, numChapters, chapterTitles: [], plotOutline, characterDescriptions, styleNotes}. If info is missing, use reasonable defaults."
+    };
+    
+    const planJSON = await withRetries(() => rate.schedule(() =>
+      callAI([extractPrompt, ...plannerChat, { role: "user", content: "Extract the book plan as JSON now." }], 2000)
+    ), 2);
+    
+    let plan;
+    try {
+      // Try to parse JSON from AI response
+      const jsonMatch = planJSON.match(/\{[\s\S]*\}/);
+      plan = JSON.parse(jsonMatch ? jsonMatch[0] : planJSON);
+    } catch (e) {
+      log("Failed to parse plan JSON, using defaults");
+      plan = {
+        title: "Untitled Book",
+        genre: "Fiction",
+        targetWordCount: 60000,
+        numChapters: 20,
+        chapterTitles: Array.from({length: 20}, (_, i) => `Chapter ${i+1}`),
+        plotOutline: "To be developed",
+        characterDescriptions: "To be developed",
+        styleNotes: "Engaging narrative style"
+      };
+    }
+    
+    // Create new project
+    const st = store.get();
+    const pid = crypto.randomUUID();
+    const chapters = {};
+    const chapterOrder = [];
+    
+    // Create chapters
+    const wordsPerChapter = Math.floor(plan.targetWordCount / plan.numChapters);
+    for (let i = 0; i < plan.numChapters; i++) {
+      const cid = crypto.randomUUID();
+      chapters[cid] = {
+        id: cid,
+        title: plan.chapterTitles[i] || `Chapter ${i+1}`,
+        text: "" // Will be written by AI
+      };
+      chapterOrder.push(cid);
+    }
+    
+    // Create project with metadata
+    st.projects[pid] = {
+      id: pid,
+      title: plan.title,
+      chapters,
+      chapterOrder,
+      cache: {
+        summaries: {},
+        styleGuide: plan.styleNotes || "",
+        characterBible: plan.characterDescriptions || "",
+        plotOutline: plan.plotOutline || ""
+      },
+      bookPlan: plan // Store the full plan
+    };
+    
+    st.activeProjectId = pid;
+    st.activeChapterId = chapterOrder[0];
+    store.set(st);
+    renderAll();
+    
+    toast(`Project "${plan.title}" created with ${plan.numChapters} chapters!`);
+    log(`Book project created: ${plan.title}`);
+    
+    // Ask if user wants to auto-write the book
+    if (confirm(`Project created! Write all chapters now using AI? (This will take several minutes)`)) {
+      await writeEntireBook(pid);
+    }
+    
+  } catch (e) {
+    log(`Generate book error: ${String(e?.message || e)}`);
+    toast("Failed to generate book (see logs).");
+  } finally {
+    setStatus("Ready");
+  }
+}
+
+async function writeEntireBook(projectId) {
+  const st = store.get();
+  const p = st.projects[projectId];
+  const plan = p.bookPlan;
+  
+  if (!plan) return toast("No book plan found.");
+  
+  setStatus("Writing book...");
+  log(`Starting full book write for: ${p.title}`);
+  
+  const wordsPerChapter = Math.floor(plan.targetWordCount / plan.numChapters);
+  let previousChapterSummary = "";
+  
+  for (let i = 0; i < p.chapterOrder.length; i++) {
+    const cid = p.chapterOrder[i];
+    const chapter = p.chapters[cid];
+    
+    log(`Writing ${chapter.title} (${i+1}/${p.chapterOrder.length})...`);
+    setStatus(`Writing ${chapter.title}...`);
+    
+    try {
+      const chapterPrompt = [
+        {
+          role: "system",
+          content: `You are writing chapter ${i+1} of "${p.title}". Genre: ${plan.genre}. Target: ~${wordsPerChapter} words.\n\nPlot: ${plan.plotOutline}\nCharacters: ${plan.characterDescriptions}\nStyle: ${plan.styleNotes}\n\nWrite engaging, well-structured prose. Use proper paragraphing and dialogue.`
+        },
+        {
+          role: "user",
+          content: `Write chapter ${i+1}: "${chapter.title}".${previousChapterSummary ? `\n\nPrevious chapter summary: ${previousChapterSummary}` : ""}\n\nWrite approximately ${wordsPerChapter} words.`
+        }
+      ];
+      
+      const chapterText = await withRetries(() => rate.schedule(() =>
+        callAI(chapterPrompt, Math.min(4000, wordsPerChapter * 2))
+      ), 2);
+      
+      chapter.text = chapterText;
+      store.set(st);
+      
+      // Generate summary for next chapter context
+      if (i < p.chapterOrder.length - 1) {
+        const summaryPrompt = [
+          { role: "system", content: "Summarize this chapter in 3-4 sentences for continuity." },
+          { role: "user", content: chapterText.slice(0, 2000) }
+        ];
+        previousChapterSummary = await withRetries(() => rate.schedule(() =>
+          callAI(summaryPrompt, 300)
+        ), 1);
+      }
+      
+      log(`Completed ${chapter.title}`);
+      
+    } catch (e) {
+      log(`Error writing ${chapter.title}: ${String(e?.message || e)}`);
+      chapter.text = `[Error writing this chapter. Please write manually or retry.]`;
+      store.set(st);
+    }
+    
+    // Update UI
+    if (i === 0) renderAll();
+  }
+  
+  toast(`Book "${p.title}" complete!`);
+  log(`Full book write complete: ${p.title}`);
+  setStatus("Ready");
+  renderAll();
+}
     setStatus("Ready");
   }
 }
