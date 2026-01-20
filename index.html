@@ -13,6 +13,22 @@
   <script src="https://unpkg.com/docx@9.5.1/build/index.umd.js"></script>
     <!-- Web LLM for local models -->
   <script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/lib/index.min.js"></script>
+    <style>
+    .chat-user, .chat-ai {
+      padding: 8px 12px;
+      margin: 6px 0;
+      border-radius: 6px;
+      line-height: 1.4;
+    }
+    .chat-user {
+      background: #1a4d2e;
+      text-align: right;
+    }
+    .chat-ai {
+      background: #1e3a5f;
+      text-align: left;
+    }
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -101,6 +117,7 @@
         <button class="tab" data-tab="analysis">Analysis</button>
         <button class="tab" data-tab="pipeline">Publishing House</button>
         <button class="tab" data-tab="research">Research</button>
+              <button class="tab" data-tab="planner">Book Planner</button>
         <button class="tab" data-tab="settings">Settings</button>
       </div>
 
@@ -207,6 +224,31 @@
           <input class="input mt8" id="researchQuery" placeholder="Ask about setting, history, tech, law, medical, etc..." />
           <pre class="output mt10" id="researchOut"></pre>
         </div>
+
+            <!-- BOOK PLANNER -->
+    <section class="tabPane hidden" id="tab-planner">
+      <div class="card">
+        <div class="label">AI Book Planner</div>
+        <div class="small">Chat with AI to develop your book idea, then generate the project and have AI write it.</div>
+        
+        <div class="row mt10">
+          <div style="flex:1; min-height:300px; max-height:400px; overflow-y:auto; border:1px solid #333; padding:10px; border-radius:4px; background:#111;" id="plannerChatBox">
+            <!-- Chat messages will appear here -->
+          </div>
+        </div>
+        
+        <div class="row mt10">
+          <input class="input" id="plannerInput" placeholder="Ask AI about your book idea (genre, plot, characters, word count, chapters...)" style="flex:1;" />
+          <button class="btn primary" id="btnSendPlanner">Send</button>
+        </div>
+        
+        <div class="row mt6">
+          <button class="btn" id="btnClearPlanner">Clear Chat</button>
+          <div class="spacer"></div>
+          <button class="btn success" id="btnGenerateBook">Generate Book Project</button>
+        </div>
+      </div>
+    </section>
       </section>
 
       <!-- SETTINGS -->
@@ -352,6 +394,14 @@
       if (savedLocalModel) {
         document.getElementById('localModelSelect').value = savedLocalModel;
       }
+    
+    // Book Planner event handlers
+    document.getElementById('btnSendPlanner').addEventListener('click', sendPlannerMessage);
+    document.getElementById('plannerInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendPlannerMessage();
+    });
+    document.getElementById('btnClearPlanner').addEventListener('click', clearPlannerChat);
+    document.getElementById('btnGenerateBook').addEventListener('click', generateBookFromPlan);
     });
   </script>
 
