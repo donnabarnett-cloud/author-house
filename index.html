@@ -1,1 +1,289 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Author House — AI Publishing Studio</title>
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- DOCX import (Word/Google Docs .docx) -->
+  <script src="https://unpkg.com/mammoth@1.8.0/mammoth.browser.min.js"></script>
+
+  <!-- DOCX export -->
+  <script src="https://unpkg.com/docx@9.5.1/build/index.umd.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brandTitle">Author House</div>
+      <div class="brandSub">AI Publishing Studio • Solo Author Edition</div>
+    </div>
+    <div class="spacer"></div>
+    <div class="pill" id="statusPill">Ready</div>
+  </header>
+
+  <div class="layout">
+    <aside class="panel sidebar">
+      <div class="panelHead">
+        <div class="panelTitle">Projects</div>
+        <button class="btn primary" id="btnNewProject">New</button>
+      </div>
+
+      <div class="card">
+        <div class="label">Project</div>
+        <select class="select" id="projectSelect"></select>
+
+        <div class="row mt8">
+          <button class="btn" id="btnRenameProject">Rename</button>
+          <button class="btn danger" id="btnDeleteProject">Delete</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Chapters</div>
+        <div class="row">
+          <button class="btn" id="btnAutoChapters">Auto-split</button>
+          <button class="btn" id="btnNewChapter">Add</button>
+        </div>
+        <select class="select mt8" id="chapterSelect"></select>
+        <div class="small mt6">Tip: Auto-split finds “Chapter 1”, headings, and separators.</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Import & Export</div>
+        <input class="input" type="file" id="docxInput" accept=".docx" />
+        <div class="row mt8">
+          <button class="btn" id="btnImportDocx">Import DOCX</button>
+          <button class="btn primary" id="btnExportDocx">Export DOCX</button>
+        </div>
+        <div class="small mt6">DOCX import/export stays in your browser.</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Quick Actions (token-light)</div>
+        <button class="btn primary w100" id="btnQuickEdit">Line Edit (selected / current chapter)</button>
+        <button class="btn w100 mt6" id="btnQuickContinue">Continue Writing (last ~900 words)</button>
+        <button class="btn w100 mt6" id="btnQuickSummary">Chapter Summary + Key Facts</button>
+        <div class="small mt6">These avoid huge “full-book sweeps”.</div>
+      </div>
+
+      <div class="card">
+        <div class="label">Open-source / Free Models</div>
+        <div class="small">
+          This app runs in-browser. If you want free local LLMs, use Ollama/LM Studio and copy these commands:
+        </div>
+        <div class="row mt8">
+          <button class="btn" id="btnCopyOllama1">Copy: ollama pull llama3.1</button>
+        </div>
+        <div class="row mt6">
+          <button class="btn" id="btnCopyOllama2">Copy: ollama pull mistral</button>
+        </div>
+        <div class="row mt6">
+          <button class="btn" id="btnCopyOllama3">Copy: ollama pull qwen2.5</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="label">Logs</div>
+        <pre class="logs" id="logBox"></pre>
+        <div class="row mt8">
+          <button class="btn" id="btnClearLogs">Clear</button>
+          <button class="btn" id="btnExportLogs">Download</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="panel main">
+      <div class="tabs">
+        <button class="tab" data-tab="write" aria-selected="true">Write</button>
+        <button class="tab" data-tab="analysis">Analysis</button>
+        <button class="tab" data-tab="pipeline">Publishing House</button>
+        <button class="tab" data-tab="research">Research</button>
+        <button class="tab" data-tab="settings">Settings</button>
+      </div>
+
+      <!-- WRITE -->
+      <section class="tabPane" id="tab-write">
+        <div class="card">
+          <div class="row">
+            <div class="label">Chapter Title</div>
+            <div class="spacer"></div>
+            <div class="small mono" id="tokenHint">Tokens: 0</div>
+          </div>
+          <input class="input mt6" id="chapterTitle" placeholder="Chapter title..." />
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div class="label">Editor</div>
+            <div class="spacer"></div>
+            <button class="btn" id="btnSelectAll">Select all</button>
+            <button class="btn" id="btnSnapshot">Snapshot</button>
+            <button class="btn" id="btnUndoSnapshot">Restore snapshot</button>
+          </div>
+          <textarea class="textarea mt8" id="editor" placeholder="Write here..."></textarea>
+
+          <div class="row mt10">
+            <button class="btn primary" id="btnApplyAi">Apply AI Output → Insert below cursor</button>
+            <button class="btn" id="btnReplaceSelection">Replace selection with AI Output</button>
+            <button class="btn danger" id="btnClearAi">Clear AI Output</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="label">AI Output</div>
+          <pre class="output mt8" id="aiOut"></pre>
+        </div>
+      </section>
+
+      <!-- ANALYSIS -->
+      <section class="tabPane hidden" id="tab-analysis">
+        <div class="card">
+          <div class="row">
+            <div class="label">Local Text Analysis Suite</div>
+            <div class="spacer"></div>
+            <button class="btn primary" id="btnRunAnalysis">Run</button>
+          </div>
+          <pre class="output mt10" id="analysisOut"></pre>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div class="label">Consistency Tools (token-light)</div>
+            <div class="spacer"></div>
+            <button class="btn" id="btnBuildStyleGuide">Build Style Guide</button>
+            <button class="btn" id="btnCharacterBible">Character Bible</button>
+          </div>
+          <pre class="output mt10" id="consistencyOut"></pre>
+        </div>
+      </section>
+
+      <!-- PIPELINE -->
+      <section class="tabPane hidden" id="tab-pipeline">
+        <div class="card">
+          <div class="row">
+            <div class="label">Publishing House Pipeline</div>
+            <div class="spacer"></div>
+            <button class="btn primary" id="btnRunPipeline">Run pipeline</button>
+          </div>
+
+          <div class="small mt6">
+            This runs staged roles (Developmental → Line → Copy → Market), chunked and rate-limited.
+            It avoids reprocessing unchanged chunks via caching.
+          </div>
+
+          <div class="row mt10">
+            <div class="label">Scope</div>
+          </div>
+          <select class="select mt6" id="pipelineScope">
+            <option value="chapter">Current chapter only (recommended)</option>
+            <option value="project">Whole project (slower)</option>
+          </select>
+
+          <div class="row mt10">
+            <div class="label">Pipeline brief (editable)</div>
+          </div>
+          <textarea class="textarea mt6" id="pipelineBrief"></textarea>
+
+          <div class="row mt10">
+            <div class="label">Pipeline report</div>
+            <div class="spacer"></div>
+            <button class="btn" id="btnDownloadPipeline">Download</button>
+          </div>
+          <pre class="output mt8" id="pipelineOut"></pre>
+        </div>
+      </section>
+
+      <!-- RESEARCH -->
+      <section class="tabPane hidden" id="tab-research">
+        <div class="card">
+          <div class="row">
+            <div class="label">Perplexity Research Assistant</div>
+            <div class="spacer"></div>
+            <button class="btn primary" id="btnAskResearch">Ask</button>
+          </div>
+          <input class="input mt8" id="researchQuery" placeholder="Ask about setting, history, tech, law, medical, etc..." />
+          <pre class="output mt10" id="researchOut"></pre>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="tabPane hidden" id="tab-settings">
+        <div class="card">
+          <div class="label">API Keys (stored locally in this browser)</div>
+          <div class="grid2 mt10">
+            <div>
+              <div class="small">Groq API Key</div>
+              <input class="input mt6" id="groqKey" placeholder="gsk_..." />
+            </div>
+            <div>
+              <div class="small">Groq Model</div>
+              <input class="input mt6" id="groqModel" placeholder="llama-3.1-70b-versatile" />
+            </div>
+          </div>
+
+          <div class="grid2 mt10">
+            <div>
+              <div class="small">Perplexity API Key</div>
+              <input class="input mt6" id="pplxKey" placeholder="pplx_..." />
+            </div>
+            <div>
+              <div class="small">Perplexity Model</div>
+              <input class="input mt6" id="pplxModel" placeholder="sonar-pro" />
+            </div>
+          </div>
+
+          <div class="row mt10">
+            <button class="btn primary" id="btnSaveKeys">Save keys</button>
+            <button class="btn danger" id="btnForgetKeys">Forget keys</button>
+          </div>
+
+          <hr class="hr" />
+
+          <div class="label">Token & Rate Optimization</div>
+          <div class="grid2 mt10">
+            <div>
+              <div class="small">Max tokens per chunk (pipeline)</div>
+              <input class="input mt6" id="maxChunkTokens" type="number" />
+            </div>
+            <div>
+              <div class="small">API min interval (ms)</div>
+              <input class="input mt6" id="minIntervalMs" type="number" />
+            </div>
+          </div>
+
+          <div class="grid2 mt10">
+            <div>
+              <div class="small">Max concurrent requests</div>
+              <input class="input mt6" id="maxConcurrent" type="number" />
+            </div>
+            <div>
+              <div class="small">Pipeline output tokens per chunk</div>
+              <input class="input mt6" id="chunkOutTokens" type="number" />
+            </div>
+          </div>
+
+          <div class="row mt10">
+            <button class="btn" id="btnSavePerf">Save optimization settings</button>
+          </div>
+
+          <div class="card mt10">
+            <div class="label">What this app does to save tokens</div>
+            <ul class="small">
+              <li>Quick actions use only selection / current chapter / last ~900 words.</li>
+              <li>Pipeline chunks text and caches results per chunk hash.</li>
+              <li>Rate limiter prevents bursts and retries safely on failures.</li>
+              <li>Structured outputs reduce rambling tokens.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
 
