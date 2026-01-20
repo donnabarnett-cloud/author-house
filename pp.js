@@ -1366,5 +1366,92 @@ function init() {
   log("App loaded");
 }
 
+/* -----------------------------
+   Tabs
+--------------------------------*/
+function initTabs() {
+    document.querySelectorAll(".tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            
+            const tab = btn.getAttribute("data-tab");
+            document.querySelectorAll(".tabPane").forEach(p => p.classList.add("hidden"));
+            const targetPane = document.getElementById(`tab-${tab}`);
+            if (targetPane) targetPane.classList.remove("hidden");
+        });
+    });
+}
+
+/* -----------------------------
+   Wire up events
+--------------------------------*/
+function init() {
+    initTabs();
+    
+    // Book Planner event handlers
+    els("btnSendPlanner").addEventListener("click", sendPlannerMessage);
+    els("plannerInput").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendPlannerMessage();
+    });
+    els("btnClearPlanner").addEventListener("click", clearPlannerChat);
+    els("btnGenerateBook").addEventListener("click", generateBookFromPlan);
+       
+    // sidebar
+    els("btnNewProject").onclick = () => { createProject(); };
+    els("projectSelect").onchange = (e) => setActiveProject(e.target.value);
+    els("btnRenameProject").onclick = renameProject;
+    els("btnDeleteProject").onclick = deleteProject;
+    els("btnAutoChapters").onclick = autoSplitChapters;
+    els("btnNewChapter").onclick = createChapter;
+    els("chapterSelect").onchange = (e) => setActiveChapter(e.target.value);
+    els("btnImportDocx").onclick = importDocx;
+    els("btnExportDocx").onclick = exportDocx;
+    els("btnQuickEdit").onclick = quickLineEdit;
+    els("btnQuickContinue").onclick = quickContinue;
+    els("btnQuickSummary").onclick = quickSummaryFacts;
+    
+    // write tab
+    els("chapterTitle").oninput = (e) => updateChapterTitle(e.target.value);
+    els("editor").oninput = (e) => updateChapterText(e.target.value);
+    els("btnSelectAll").onclick = () => { const ta = els("editor"); ta.focus(); ta.select(); };
+    els("btnSnapshot").onclick = snapshot;
+    els("btnUndoSnapshot").onclick = restoreSnapshot;
+    els("btnApplyAi").onclick = applyAiInsert;
+    els("btnReplaceSelection").onclick = applyAiReplaceSelection;
+    els("btnClearAi").onclick = clearAiOutput;
+    
+    // analysis tab
+    els("btnRunAnalysis").onclick = runAnalysis;
+    els("btnBuildStyleGuide").onclick = buildStyleGuide;
+    els("btnCharacterBible").onclick = buildCharacterBible;
+    
+    // pipeline tab
+    els("btnRunPipeline").onclick = runPipeline;
+    els("btnDownloadPipeline").onclick = downloadPipeline;
+    
+    // research tab
+    els("btnAskResearch").onclick = askResearch;
+    
+    // settings tab
+    els("btnSaveKeys").onclick = saveKeys;
+    els("btnForgetKeys").onclick = forgetKeys;
+    els("btnSavePerf").onclick = savePerf;
+    
+    // logs
+    els("btnClearLogs").onclick = () => { const st = store.get(); st.logs = []; store.set(st); renderLogs(); };
+    els("btnExportLogs").onclick = exportLogs;
+    
+    // local model copy helpers
+    els("btnCopyOllama1").onclick = async () => { await navigator.clipboard.writeText("ollama pull llama3.1"); toast("Copied"); };
+    els("btnCopyOllama2").onclick = async () => { await navigator.clipboard.writeText("ollama pull mistral"); toast("Copied"); };
+    els("btnCopyOllama3").onclick = async () => { await navigator.clipboard.writeText("ollama pull qwen2.5"); toast("Copied"); };
+    
+    // initialize
+    renderAll();
+    setStatus("Ready");
+    log("App loaded");
+}
+
 init();
 
