@@ -1288,9 +1288,9 @@ function renderAll() {
    Tabs
 --------------------------------*/
 }function initTabs() {
-    document.querySelectorAll(".tabBtn").forEach(btn => {
+    document.querySelectorAll(".tab").forEach(btn => {
         btn.addEventListener("click", () => {
-            document.querySelectorAll(".tabBtn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
             btn.classList.add("active");
             
             const tab = btn.getAttribute("data-tab");
