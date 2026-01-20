@@ -11,9 +11,87 @@
 const APP_KEY = "author-house:v1";
 const KEY_GROQ = "author-house:groqKey";
 const KEY_PPLX = "author-house:pplxKey";
+const KEY_MODE = "author-house:mode"; // groq | perplexity | local
 
 const els = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+// ------------------------------ 
+// Local Model Support
+// ------------------------------
+const LOCAL_MODELS = [
+  { id: 'llama-3.2-1b', name: 'Llama 3.2 1B (Fast)', size: '1B' },
+  { id: 'llama-3.2-3b', name: 'Llama 3.2 3B', size: '3B' },
+  { id: 'phi-3-mini', name: 'Phi-3 Mini', size: '3.8B' },
+  { id: 'gemma-2b', name: 'Gemma 2B', size: '2B' }
+];
+
+let localModelInstance = null;
+
+// Check if Web LLM is available
+function isLocalModelAvailable() {
+  return typeof window.MLCEngine !== 'undefined';
+}
+
+// Initialize local model
+async function initLocalModel(modelId) {
+  if (!isLocalModelAvailable()) {
+    throw new Error('Web LLM not loaded. Please include the Web LLM library.');
+  }
+  
+  try {
+    setStatus(`Loading ${modelId}...`);
+    const engine = new window.MLCEngine();
+    await engine.reload(modelId);
+    localModelInstance = engine;
+    setStatus('Local model ready');
+    toast(`${modelId} loaded successfully`);
+    return engine;
+  } catch (err) {
+    log(`Local model init error: ${err}`);
+    throw err;
+  }
+}
+
+// Call local AI model
+async function callLocalAI(messages, options = {}) {
+  if (!localModelInstance) {
+    const selectedModel = localStorage.getItem('author-house:localModel') || 'llama-3.2-1b';
+    await initLocalModel(selectedModel);
+  }
+  
+  try {
+    const completion = await localModelInstance.chat.completions.create({
+      messages,
+      temperature: options.temperature || 0.7,
+      max_tokens: options.max_tokens || 2000
+    });
+    
+    return completion.choices[0].message.content;
+  } catch (err) {
+    log(`Local AI call error: ${err}`);
+    throw err;
+  }
+}
+
+// Get current AI mode
+function getAIMode() {
+  return localStorage.getItem(KEY_MODE) || 'groq';
+}
+
+// Set AI mode
+function setAIMode(mode) {
+  localStorage.setItem(KEY_MODE, mode);
+  updateModeUI();
+}
+
+// Update mode UI indicators
+function updateModeUI() {
+  const mode = getAIMode();
+  document.querySelectorAll('[data-mode]').forEach(el => {
+    el.classList.toggle('active', el.dataset.mode === mode);
+  });
+}
 
 /* -----------------------------
    Toast + Status + Logs
@@ -269,6 +347,27 @@ async function callPerplexityChat(messages) {
   return citations.length
     ? `${content}\n\nSources:\n${citations.map(c => `- ${c}`).join("\n")}`
     : content;
+}
+
+// Unified AI call function that routes to appropriate provider
+async function callAI(messages, maxTokens = 2000) {
+  const mode = getAIMode();
+  
+  log(`Calling AI in ${mode} mode...`);
+  
+  try {
+    if (mode === 'local') {
+      return await callLocalAI(messages, { max_tokens: maxTokens });
+    } else if (mode === 'perplexity') {
+      return await callPerplexityChat(messages);
+    } else {
+      // Default to Groq
+      return await callGroqChat(messages, maxTokens);
+    }
+  } catch (err) {
+    log(`AI call failed in ${mode} mode: ${err.message}`);
+    throw err;
+  }
 }
 
 /* -----------------------------
