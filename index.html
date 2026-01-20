@@ -11,6 +11,8 @@
 
   <!-- DOCX export -->
   <script src="https://unpkg.com/docx@9.5.1/build/index.umd.js"></script>
+    <!-- Web LLM for local models -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/lib/index.min.js"></script>
 </head>
 <body>
   <header class="topbar">
@@ -233,6 +235,26 @@
             </div>
           </div>
 
+                <div class="label">AI Mode</div>
+      <div class="grid2 mt10">
+        <div>
+          <label><input type="radio" name="aiMode" value="groq" data-mode="groq" checked> Groq (Cloud)</label><br>
+          <label><input type="radio" name="aiMode" value="perplexity" data-mode="perplexity"> Perplexity (Cloud)</label><br>
+          <label><input type="radio" name="aiMode" value="local" data-mode="local"> Local (Free, runs in browser)</label>
+        </div>
+      </div>
+
+      <div class="mt10" id="localModelSection" style="display:none;">
+        <div class="label">Local Model</div>
+        <select id="localModelSelect" class="input mt6">
+          <option value="llama-3.2-1b">Llama 3.2 1B (Fast)</option>
+          <option value="llama-3.2-3b">Llama 3.2 3B</option>
+          <option value="phi-3-mini">Phi-3 Mini (3.8B)</option>
+          <option value="gemma-2b">Gemma 2B</option>
+        </select>
+        <div class="small" style="margin-top:6px;">First load may take 1-2 minutes to download model.</div>
+      </div>
+
           <div class="row mt10">
             <button class="btn primary" id="btnSaveKeys">Save keys</button>
             <button class="btn danger" id="btnForgetKeys">Forget keys</button>
@@ -282,6 +304,56 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
+
+  <script>
+    // AI Mode switching
+    document.querySelectorAll('input[name="aiMode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const mode = e.target.value;
+        setAIMode(mode);
+        
+        // Show/hide local model selector
+        const localSection = document.getElementById('localModelSection');
+        if (mode === 'local') {
+          localSection.style.display = 'block';
+        } else {
+          localSection.style.display = 'none';
+        }
+        
+        toast(`Switched to ${mode} mode`);
+      });
+    });
+    
+    // Local model selection
+    document.getElementById('localModelSelect').addEventListener('change', (e) => {
+      const modelId = e.target.value;
+      localStorage.setItem('author-house:localModel', modelId);
+      toast(`Selected ${modelId}`);
+      // Clear existing instance to force reload on next use
+      localModelInstance = null;
+    });
+    
+    // Initialize mode UI on load
+    window.addEventListener('load', () => {
+      const savedMode = getAIMode();
+      document.querySelectorAll('input[name="aiMode"]').forEach(radio => {
+        if (radio.value === savedMode) {
+          radio.checked = true;
+        }
+      });
+      
+      // Show local section if local mode is selected
+      if (savedMode === 'local') {
+        document.getElementById('localModelSection').style.display = 'block';
+      }
+      
+      // Load saved local model
+      const savedLocalModel = localStorage.getItem('author-house:localModel');
+      if (savedLocalModel) {
+        document.getElementById('localModelSelect').value = savedLocalModel;
+      }
+    });
+  </script>
 
   <script src="app.js"></script>
 </body>
