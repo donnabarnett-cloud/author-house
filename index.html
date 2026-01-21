@@ -231,6 +231,28 @@
           <pre class="output mt10" id="researchOut"></pre>
         </div>
 
+      
+    <!-- BOOK PLANNER -->
+    <section class="tabPane hidden" id="tab-planner">
+        <div class="card">
+            <div class="label">AI Book Planner</div>
+            <div class="small">Chat with AI to develop your book idea, then generate the project and have AI write it.</div>
+            <div id="plannerChatBox" style="flex:1; min-height:300px; max-height:400px; overflow-y:auto; border:1px solid #333; padding:10px; border-radius:4px; background:#111; margin-top:10px;">
+                <!-- Chat messages appear here -->
+            </div>
+            <div class="row mt8">
+                <input class="input" id="plannerInput" placeholder="Ask AI about your book idea (genre, plot, characters, word count, chapters...)" style="flex:1;" />
+                <button class="btn primary" id="btnSendPlanner">Send</button>
+            </div>
+            <div class="row mt8">
+                <button class="btn" id="btnClearPlanner">Clear Chat</button>
+                <div class="spacer"></div>
+                <button class="btn primary" id="btnGenerateBook">Generate Book Project</button>
+            </div>
+        </div>      
+          </section>
+      </section>
+
             <!-- BOOK PLANNER -->
     <section class="tabPane hidden" id="tab-planner">
       <div class="card">
