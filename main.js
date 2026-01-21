@@ -42,8 +42,7 @@ async function initLocalModel(modelId) {
   
   try {
     setStatus(`Loading ${modelId}...`);
-    const engine = new window.MLCEngine();
-    await engine.reload(modelId);
+          const engine = await window.MLCEngine(modelId);
     localModelInstance = engine;
     setStatus('Local model ready');
     toast(`${modelId} loaded successfully`);
