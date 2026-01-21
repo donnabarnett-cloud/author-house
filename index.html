@@ -12,7 +12,13 @@
   <!-- DOCX export -->
   <script src="https://unpkg.com/docx@9.5.1/build/index.umd.js"></script>
     <!-- Web LLM for local models -->
-  <script type="module" src="https://cdn.jsdelivr.net/npm/@mlc-ai/web-llm@0.2.46/lib/index.min.js"></script>
+    <script type="module">
+    // Load WebLLM and expose to window for main.js
+    import * as webllm from 'https://esm.run/@mlc-ai/web-llm';
+    window.webllm = webllm;
+    window.MLCEngine = webllm.MLCEngine || webllm.CreateMLCEngine;
+    console.log('WebLLM loaded:', window.MLCEngine ? 'SUCCESS' : 'FAILED');
+  </script>
     <style>
     .chat-user, .chat-ai {
       padding: 8px 12px;
